@@ -43,6 +43,8 @@ svg{display:block}
 .mini:hover{background:rgba(0,0,0,.05)}
 .side-actions{margin-top:auto;padding-top:14px;display:flex;flex-direction:column;gap:2px}
 .side-actions .nav-item{color:#333;font-size:14px}
+.set-list .nav-item{border:1.5px solid #eee;margin-bottom:8px;padding:14px 12px;font-weight:600;min-height:52px}
+.set-list .nav-item .count{opacity:.7}
 .scrim{display:none}
 
 /* Main */
@@ -166,12 +168,7 @@ textarea.input{resize:vertical;min-height:80px}
     <label class="search"><span id="search-ic"></span><input id="search" type="search" placeholder="Search all tasks" enterkeyhint="search" autocomplete="off"></label>
     <nav id="nav"></nav>
     <div class="side-actions">
-      <button class="nav-item" id="btn-newlist"></button>
-      <button class="nav-item" id="btn-newfolder"></button>
-      <button class="nav-item" id="btn-morning"></button>
-      <button class="nav-item" id="btn-sound"></button>
-      <button class="nav-item" id="btn-backup"></button>
-      <button class="nav-item" id="btn-notify"></button>
+      <button class="nav-item" id="btn-settings"></button>
     </div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -226,7 +223,8 @@ const P={
   mute:'<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6M17 9l6 6"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
-  safe:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+  safe:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  gear:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'
 };
 const I={};Object.keys(P).forEach(k=>I[k]=(s,w)=>sv(P[k],s,w));
 const starFill=(s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="#111" stroke="#111" stroke-width="2" stroke-linejoin="round">${P.star}</svg>`;
@@ -511,7 +509,7 @@ function notifyLabel(){
   if(!canNotify())return'Notifications unavailable here';
   return Notification.permission==='granted'?'Notifications on':Notification.permission==='denied'?'Notifications blocked':'Turn on notifications';
 }
-function renderNotifyBtn(){$('#btn-notify').innerHTML=I.bell(18)+`<span class="nm">${notifyLabel()}</span>`}
+function renderNotifyBtn(){const b=$('#btn-notify');if(b)b.innerHTML=I.bell(18)+`<span class="nm">${notifyLabel()}</span>`}
 async function askNotify(){
   if(!canNotify()){toast(isIOS()?'On iPhone: Share → Add to Home Screen, then open the app from there to allow notifications':'This browser can’t show notifications here — reminders will show inside the app');return}
   if(Notification.permission==='default'){try{await Notification.requestPermission()}catch(e){}}
@@ -548,7 +546,7 @@ function checkMorning(){
   const msg=morningText();
   chime();toast(I.sun(16)+esc('Good morning! '+msg),8000);sysNotify('Good morning',msg,'morning-'+td);
 }
-function renderMorningBtn(){const m=morning();$('#btn-morning').innerHTML=I.sun(18)+`<span class="nm">Morning summary</span><span class="count">${m.on?m.time:'Off'}</span>`}
+function renderMorningBtn(){const m=morning(),b=$('#btn-morning');if(b)b.innerHTML=I.sun(18)+`<span class="nm">Morning summary</span><span class="count">${m.on?m.time:'Off'}</span>`}
 function openMorning(){
   const m=morning();
   openSheet(`<h2>Morning summary</h2>
@@ -822,7 +820,19 @@ function closeSide(){$('#sidebar').classList.remove('open');$('#scrim').classLis
 $('#btn-menu').onclick=()=>{$('#sidebar').classList.add('open');$('#scrim').classList.add('open')};
 $('#scrim').onclick=closeSide;
 $('#btn-sort').onclick=openSort;$('#btn-bg').onclick=openBg;$('#btn-more').onclick=()=>openListSheet(S.current);
-$('#btn-newlist').onclick=()=>openListSheet(null);$('#btn-newfolder').onclick=()=>openFolderSheet(null);$('#btn-notify').onclick=askNotify;$('#btn-backup').onclick=openBackup;$('#btn-sound').onclick=openSound;$('#btn-morning').onclick=openMorning;
+function openSettings(){
+  openSheet(`<h2>Settings</h2><div class="set-list">
+    <button class="nav-item" id="btn-newlist">${I.listplus(18)}<span class="nm">New list</span></button>
+    <button class="nav-item" id="btn-newfolder">${I.folderplus(18)}<span class="nm">New folder</span></button>
+    <button class="nav-item" id="btn-morning"></button>
+    <button class="nav-item" id="btn-sound">${I.volume(18)}<span class="nm">Sound</span></button>
+    <button class="nav-item" id="btn-backup">${I.safe(18)}<span class="nm">Backup &amp; restore</span></button>
+    <button class="nav-item" id="btn-notify"></button>
+  </div>`);
+  renderMorningBtn();renderNotifyBtn();
+  $('#btn-newlist').onclick=()=>openListSheet(null);$('#btn-newfolder').onclick=()=>openFolderSheet(null);$('#btn-notify').onclick=askNotify;$('#btn-backup').onclick=openBackup;$('#btn-sound').onclick=openSound;$('#btn-morning').onclick=openMorning;
+}
+$('#btn-settings').onclick=openSettings;
 $('#add-form').addEventListener('submit',e=>{
   e.preventDefault();const inp=$('#add-input'),title=inp.value.trim();if(!title)return;
   const vid=S.current,t=newTask({title});
@@ -838,8 +848,7 @@ const si=$('#search');
 si.addEventListener('input',()=>{Q=si.value.trim();render();$('#scroll').scrollTop=0});
 si.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();si.blur();closeSide()}else if(e.key==='Escape'){si.value='';Q='';render()}});
 $('#logo').innerHTML='<img src="icon-192.png" alt="" style="width:100%;height:100%;display:block">';$('#btn-menu').innerHTML=I.menu(20);$('#btn-sort').innerHTML=I.sort(19);$('#btn-bg').innerHTML=I.image(19);$('#btn-more').innerHTML=I.more(20);$('#add-btn').innerHTML=I.plus(22,2.5);
-$('#btn-newlist').innerHTML=I.listplus(18)+'<span class="nm">New list</span>';$('#btn-newfolder').innerHTML=I.folderplus(18)+'<span class="nm">New folder</span>';$('#btn-sound').innerHTML=I.volume(18)+'<span class="nm">Sound</span>';$('#btn-backup').innerHTML=I.safe(18)+'<span class="nm">Backup &amp; restore</span>';
-renderNotifyBtn();renderMorningBtn();
+$('#btn-settings').innerHTML=I.gear(18)+'<span class="nm">Settings</span>';
 
 let lastDay=todayStr();
 function tick(){const d=todayStr();if(d!==lastDay){lastDay=d;regen();render()}else regen();checkReminders();checkMorning()}
